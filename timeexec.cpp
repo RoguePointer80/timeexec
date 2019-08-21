@@ -28,24 +28,24 @@ void print_time(std::string_view label, ULARGE_INTEGER duration)
     printf("%.*s %6d.%06d sec\r\n", static_cast<int>(label.size()), label.data(), secs, micros);
 }
 
-int main(int argc, char* argv[])
+int wmain(int argc, wchar_t* argv[], wchar_t* envp[])
 {
     if (argc <= 1) {
         puts("Missing command-line to timeexec\r\n");
         return 1;
     }
 
-    STARTUPINFOA si = {};
+    STARTUPINFOW si = {};
     PROCESS_INFORMATION pi = {};
 
-    std::string commandLine{"CMD.EXE /C"}; // this is required to support timing built-in commands like 'dir', 'type' or 'echo'
+    std::wstring commandLine{L"CMD.EXE /C"}; // this is required to support timing built-in commands like 'dir', 'type' or 'echo'
     for (int i = 1; i < argc; ++i)
     {
         commandLine += ' ';
-        std::string argument{ argv[i] };
+        std::wstring argument{ argv[i] };
         commandLine += argument;
     }
-    BOOL create_result = CreateProcessA(NULL ,          // lpApplicationName
+    BOOL create_result = CreateProcessW(NULL ,          // lpApplicationName
                                         &commandLine[0],// lpCommandLine
                                         NULL,           // lpProcessAttributes
                                         NULL,           // lpThreadAttributes
