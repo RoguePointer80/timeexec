@@ -3,6 +3,7 @@
 #include "processthreadsapi.h"
 #include <string>
 #include <string_view>
+#include <set>
 
 #define TICKS_PER_SEC 10000000
 
@@ -28,6 +29,61 @@ void print_time(std::string_view label, ULARGE_INTEGER duration)
     printf("%.*s %6d.%06d sec\r\n", static_cast<int>(label.size()), label.data(), secs, micros);
 }
 
+struct InsensitiveCompare {
+    bool operator() (const std::wstring& a, const std::wstring& b) const
+    {
+        int val = CompareStringEx(LOCALE_NAME_USER_DEFAULT, NORM_IGNORECASE, a.c_str(), (int)a.size(), b.c_str(), (int)b.size(), NULL, NULL, 0);
+        return val == CSTR_LESS_THAN;
+    }
+};
+
+bool isCmdInternalCommand(std::wstring cmd)
+{
+    static std::set<std::wstring, InsensitiveCompare> knownInternalCommands {
+        L"ASSOC",
+        L"BREAK",
+        L"CALL",
+        L"CD",
+        L"CLS",
+        L"COLOR",
+        L"COPY",
+        L"DATE",
+        L"DEL",
+        L"DIR",
+        L"ECHO",
+        L"ERASE",
+        L"EXIT",
+        L"FOR",
+        L"FTYPE",
+        L"GOTO",
+        L"IF",
+        L"MD",
+        L"MKDIR",
+        L"MKLINK",
+        L"MOVE",
+        L"PATH",
+        L"PAUSE",
+        L"POPD",
+        L"PROMPT",
+        L"PUSHD",
+        L"REM",
+        L"RENAME",
+        L"RD",
+        L"RMDIR",
+        L"SET",
+        L"SETLOCAL",
+        L"SHIFT",
+        L"START",
+        L"TIME",
+        L"TITLE",
+        L"TYPE",
+        L"VER",
+        L"VERIFY",
+        L"VOL"
+    };
+    return knownInternalCommands.find(cmd) != knownInternalCommands.end();
+}
+
 int wmain(int argc, wchar_t* argv[], wchar_t* envp[])
 {
     if (argc <= 1) {
@@ -38,10 +94,16 @@ int wmain(int argc, wchar_t* argv[], wchar_t* envp[])
     STARTUPINFOW si = {};
     PROCESS_INFORMATION pi = {};
 
-    std::wstring commandLine{L"CMD.EXE /C"}; // this is required to support timing built-in commands like 'dir', 'type' or 'echo'
+    std::wstring commandLine;
+    if (isCmdInternalCommand(argv[1])) {
+        commandLine = L"CMD.EXE /C "; // this is required to support timing built-in commands like 'dir', 'type' or 'echo'
+    }
+    else {
+        commandLine = L"";
+    }
     for (int i = 1; i < argc; ++i)
     {
-        commandLine += ' ';
+        if(i > 1) commandLine += ' ';
         std::wstring argument{ argv[i] };
         commandLine += argument;
     }
